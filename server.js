@@ -1,16 +1,22 @@
-// server.js - Starter Express server for Week 2 assignment
+import express from 'express';
+import bodyParser from 'body-parser';
+import { v4 as uuidv4 } from 'uuid';
+import dotenv from 'dotenv';
+import { connectDb } from './config/db.js';
+import productRoutes from './routes/productRoutes.js';
 
-// Import required modules
-const express = require('express');
-const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid');
+// Initialize dotenv
+dotenv.config();
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Connect to MongoDB
+connectDb();
 
 // Middleware setup
 app.use(bodyParser.json());
+app.use('/api/products', productRoutes);
 
 // Sample in-memory products database
 let products = [
@@ -53,7 +59,7 @@ app.get('/', (req, res) => {
 // DELETE /api/products/:id - Delete a product
 
 // Example route implementation for GET /api/products
-app.get('/api/products', (req, res) => {
+app.get('/api/product', (req, res) => {
   res.json(products);
 });
 
@@ -68,4 +74,4 @@ app.listen(PORT, () => {
 });
 
 // Export the app for testing purposes
-module.exports = app; 
+export default app;
