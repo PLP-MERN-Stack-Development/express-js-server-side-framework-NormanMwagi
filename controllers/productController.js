@@ -1,5 +1,5 @@
 import Product from '../models/Product.js';
-
+import { productSchema, productUpdateSchema } from '../middleware/productValidation.js';
 
 export const getAllProducts = async (req, res) => {
     try{
@@ -11,6 +11,7 @@ export const getAllProducts = async (req, res) => {
     }
     
 }
+
 export const getProductById = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
@@ -25,11 +26,22 @@ export const getProductById = async (req, res) => {
     }
 
 }
+
 export const createProduct = async (req, res) => {
     try {
-        const newProduct = new Product(req.body);
+        const {error, value } = productSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Validation failed",
+                details: error.details.map( (err) => err.message ),
+            });
+        }
+        
+        const newProduct = new Product(value);
         const savedProduct = await newProduct.save();
-        res.status(201).json(savedProduct);
+
+        res.status(201).json({ success: true, data: savedProduct });
     } 
     catch (error) {
         console.error('Error creating product:', error);
@@ -37,11 +49,21 @@ export const createProduct = async (req, res) => {
     }
 
 }
+
 export const updateProduct = async (req, res) => {
     try {
+        const { error, value } = productUpdateSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Validation failed",
+                details: error.details.map( (err) => err.message ),
+            });
+        }
+
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            value,
             { new: true }
         );
         if (!updatedProduct) {
@@ -54,6 +76,7 @@ export const updateProduct = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 }
+
 export const deleteProduct = async (req, res) => {
     try {
         const deletedProduct = await Product.findByIdAndDelete(req.params.id );
