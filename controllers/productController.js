@@ -1,10 +1,32 @@
 import Product from '../models/Product.js';
 import { productSchema, productUpdateSchema } from '../middleware/productValidation.js';
+// @desc   Get all products (with filtering, pagination, and search)
+// @route  GET /api/products
 
 export const getAllProducts = async (req, res) => {
     try{
-        const products = await Product.find();
-        res.json(products);
+        const {category, search, page = 1, limit = 10} = req.query;
+        const query = {};
+
+        if (category) {
+            query.category = category;
+        }
+        //search by name 
+        if (search) {
+            query.name = { $regex: search, $options: 'i' }; // case-insensitive search
+        }
+        const skip = (page - 1) * limit;
+        const products = await Product.find(query)
+        .skip(skip)
+        .limit(parseInt(limit));
+        
+        const total = await Product.countDocuments(query);
+        res.json({
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / limit),
+        results: products,
+    });
     } catch (error) {
         console.error('Error fetching products:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -26,6 +48,29 @@ export const getProductById = async (req, res) => {
     }
 
 }
+// @desc   Get product statistics (count by category)
+// @route  GET /api/products/stats
+export const getProductStats = async (req, res) => {
+  try {
+    const stats = await Product.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          totalProducts: { $sum: 1 },
+          avgPrice: { $avg: '$price' },
+          inStockCount: { $sum: { $cond: ['$inStock', 1, 0] } },
+        },
+      },
+      { $sort: { totalProducts: -1 } },
+    ]);
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 
 export const createProduct = async (req, res) => {
     try {
